@@ -1,4 +1,5 @@
 # hopps-k3s
+[Hopps](https://github.com/hopps-app/hopps)
 
 ## Disclaimer
 This is a deployment of the current hopps `27.01.2025` chart `0.0.4`.
