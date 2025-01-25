@@ -1,0 +1,11 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: mw-admin
+  namespace: kube-system
+spec:
+  stripPrefix:
+    forceSlash: false
+    prefixes:
+      - /api/org
+      - /api/fin

@@ -1,0 +1,9 @@
+dependencies:
+- name: hopps
+  repository: oci://ghcr.io/hopps-app/hopps
+  version: 0.0.4
+- name: minio
+  repository: https://charts.bitnami.com/bitnami
+  version: 14.10.5
+digest: sha256:35bb080cd00e023034046a906dd75539a6e394f099320a463cb33be0acf7d09d
+generated: "2025-01-25T19:48:09.286936419Z"

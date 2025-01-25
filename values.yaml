@@ -1,0 +1,177 @@
+hopps:
+  azDocumentAi:
+    replicaCount: 1
+    image:
+      tag: 395
+    envVars:
+      - name: APP_HOPPS_AZ_DOCUMENT_AI_AZURE_ENDPOINT
+        value: http://localhost
+      - name: APP_HOPPS_AZ_DOCUMENT_AI_AZURE_KEY
+        value: abc
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: hopps-kafka:9092
+
+  fin:
+    replicaCount: 1
+    image:
+      tag: 395
+    envVars:
+      - name: QUARKUS_OIDC_AUTH_SERVER_URL
+        value: http://hopps-keycloak/realms/hopps
+      - name: QUARKUS_OIDC_AUTH_CLIENT_ID
+        value: hopps
+      - name: QUARKUS_OPENFGA_URL
+        value: http://hopps-openfga:8080
+      - name: QUARKUS_OPENFGA_STORE
+        value: hopps
+      - name: QUARKUS_DATASOURCE_JDBC_URL
+        value: jdbc:postgresql://hopps-fin-postgresql:5432/fin?loggerLevel=OFF
+      - name: QUARKUS_DATASOURCE_USERNAME
+        value: postgres
+      - name: QUARKUS_DATASOURCE_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: hopps-fin-postgresql
+            key: postgres-password
+      - name: KAFKA_BOOTSTRAP_SERVERS
+        value: hopps-kafka:9092
+      - name: QUARKUS_S3_ENDPOINT_OVERRIDE
+        value: http://hopps-minio:9000
+      - name: QUARKUS_S3_AWS_REGION
+        value: eu-west-1
+      - name: QUARKUS_S3_AWS_CREDENTIALS_TYPE
+        value: static
+      - name: QUARKUS_S3_AWS_CREDENTIALS_STATIC_PROVIDER_ACCESS_KEY_ID
+        valueFrom:
+          secretKeyRef:
+            name: hopps-minio
+            key: user
+      - name: QUARKUS_S3_AWS_CREDENTIALS_STATIC_PROVIDER_SECRET_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: hopps-minio
+            key: pass
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      path: /api/fin
+      hosts:
+        - z-box.local
+      annotations:
+        kubernetes.io/ingress.class: traefik
+        traefik.ingress.kubernetes.io/router.entrypoints: web
+        traefik.ingress.kubernetes.io/router.middlewares: kube-system-mw-admin@kubernetescrd
+
+  org:
+    replicaCount: 1
+    image:
+      tag: 395
+    envVars:
+      - name: QUARKUS_OIDC_AUTH_SERVER_URL
+        value: http://hopps-keycloak/realms/hopps
+      - name: QUARKUS_OIDC_AUTH_CLIENT_ID
+        value: hopps
+      - name: QUARKUS_OPENFGA_URL
+        value: http://hopps-openfga:8080
+      - name: QUARKUS_OPENFGA_STORE
+        value: hopps
+      - name: QUARKUS_DATASOURCE_JDBC_URL
+        value: jdbc:postgresql://hopps-org-postgresql:5432/org?loggerLevel=OFF
+      - name: QUARKUS_DATASOURCE_USERNAME
+        value: postgres
+      - name: QUARKUS_DATASOURCE_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: hopps-org-postgresql
+            key: postgres-password
+      - name: QUARKUS_KEYCLOAK_ADMIN_CLIENT_SERVER_URL
+        value: http://hopps-keycloak
+      - name: QUARKUS_KEYCLOAK_ADMIN_CLIENT_USERNAME
+        value: hopps
+      - name: QUARKUS_KEYCLOAK_ADMIN_CLIENT_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            key: admin-password
+            name: hopps-keycloak
+      - name: APP_HOPPS_ORG_AUTH_REALM_NAME
+        value: hopps
+      - name: APP_HOPPS_ORG_AUTH_DEFAULT_ROLE
+        name: user
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      path: /api/org
+      hosts:
+        - z-box.local
+      annotations:
+        kubernetes.io/ingress.class: traefik
+        traefik.ingress.kubernetes.io/router.entrypoints: web
+        traefik.ingress.kubernetes.io/router.middlewares: kube-system-mw-admin@kubernetescrd
+
+  postgresql-fin:
+    enabled: true
+    auth:
+      username: postgres
+      secret: fin-postgresql
+
+  postgresql-org:
+    enabled: true
+    auth:
+      username: postgres
+      secret: org-postgresql
+
+  frontend:
+    replicaCount: 1
+    image:
+      tag: 197
+    envVars:
+      - name: VITE_KEYCLOAK_URL
+        value: http://keycloak.z-box.local
+      - name: VITE_KEYCLOAK_REALM
+        value: hopps
+      - name: VITE_KEYCLOAK_CLIENT_ID
+        value: hopps
+      - name: VITE_API_ORG_URL
+        value: http://z-box.local/api/org
+      - name: VITE_API_FIN_URL
+        value: http://z-box.local/api/fin
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      path: /
+      hosts:
+        - z-box.local
+      annotations:
+        kubernetes.io/ingress.class: traefik
+        traefik.ingress.kubernetes.io/router.entrypoints: web
+
+  keycloak:
+    enabled: true
+    resourcesPreset: small
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      tls: false
+      annotations:
+        kubernetes.io/ingress.class: traefik
+        traefik.ingress.kubernetes.io/router.entrypoints: web
+      hostname: keycloak.z-box.local
+    metrics:
+      enabled: false
+    auth:
+      adminUser: hopps
+
+  kafka:
+    replicaCount: 1
+    controller:
+      replicaCount: 1
+    listeners:
+      client:
+        protocol: PLAINTEXT
+
+minio:
+  auth:
+    existingSecret: hopps-minio
+    rootUserSecretKey: user
+    rootPasswordSecretKey: pass
+  defaultBuckets: invoices
